@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>Arlington Campus Events</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red: #D41B2C;
+    --red-dark: #a8141f;
+    --red-glow: rgba(212,27,44,0.22);
+
+    /* Fixed pixel sizes based on 1920x1006 */
+    --header-h: 110px;
+    --ticker-h: 48px;
+    --footer-h: 36px;
+    --grid-h: calc(1006px - 110px - 48px - 36px); /* 812px */
+  }
+  html, body {
+    width: 1920px;
+    height: 1006px;
+    overflow: hidden;
+    background: #0d0d0d;
+    font-family: 'Lato', sans-serif;
+    color: #fff;
+    user-select: none;
+    cursor: none;
+  }
+  #shell { display: flex; flex-direction: column; width: 1920px; height: 1006px; }
+
+  /* HEADER */
+  #header {
+    background: #fff;
+    border-bottom: 3px solid var(--red);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px;
+    height: var(--header-h);
+    flex-shrink: 0;
+  }
+  #header-left { display: flex; align-items: center; gap: 28px; }
+  #nu-wordmark { height: 56px; width: auto; object-fit: contain; }
+  #divider { width: 1px; height: 44px; background: #ddd; }
+  #header-title { font-size: 18px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #111; line-height: 1.4; }
+  #header-title span { display: block; font-weight: 300; font-size: 13px; letter-spacing: 0.14em; color: #888; margin-top: 2px; }
+  #clock-block { text-align: right; }
+  #clock { font-size: 52px; font-weight: 300; letter-spacing: 0.04em; color: #111; line-height: 1; }
+  #date-disp { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-top: 4px; }
+
+  /* TICKER */
+  #ticker {
+    background: var(--red);
+    height: var(--ticker-h);
+    display: flex; align-items: center;
+    overflow: hidden; flex-shrink: 0; position: relative;
+  }
+  #ticker::before, #ticker::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
+  }
+  #ticker::before { left: 0; background: linear-gradient(to right, var(--red), transparent); }
+  #ticker::after  { right: 0; background: linear-gradient(to left, var(--red), transparent); }
+  #ticker-label { position: absolute; left: 24px; z-index: 3; font-size: 11px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.55); background: var(--red); padding-right: 16px; white-space: nowrap; }
+  #ticker-track { display: flex; white-space: nowrap; padding-left: 220px; animation: ticker-scroll 50s linear infinite; }
+  #ticker-track span { font-size: 15px; font-weight: 400; letter-spacing: 0.1em; color: rgba(255,255,255,0.92); padding: 0 36px; border-right: 1px solid rgba(255,255,255,0.2); }
+  @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+  /* WEEK GRID */
+  #week-grid {
+    height: var(--grid-h);
+    overflow: hidden;
+    display: flex; align-items: stretch;
+    padding: 10px 12px;
+    background: #f0f0f0;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .day-col {
+    flex: 1; display: flex; flex-direction: column;
+    margin: 0 5px;
+    border-radius: 8px; overflow: hidden;
+    background: #fff; border: 1px solid #e0e0e0;
+    min-width: 0;
+  }
+  .day-col.today { border-color: var(--red); box-shadow: 0 0 0 1px var(--red), 0 4px 16px rgba(212,27,44,0.12); }
+  .day-col.past { opacity: 0.45; }
+
+  .day-header { flex-shrink: 0; padding: 10px 10px 8px; border-bottom: 1px solid #eee; background: #fff; position: relative; }
+  .day-col.today .day-header { background: var(--red); border-bottom-color: var(--red-dark); }
+  .day-name { font-size: 15px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: #111; line-height: 1; }
+  .day-col.today .day-name { color: #fff; }
+  .day-date-num { font-size: 34px; font-weight: 300; color: rgba(0,0,0,0.08); line-height: 1; margin-top: 1px; }
+  .day-col.today .day-date-num { color: rgba(255,255,255,0.25); }
+  .day-hours { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #bbb; margin-top: 3px; }
+  .day-col.today .day-hours { color: rgba(255,255,255,0.55); }
+  .today-pill { display: none; position: absolute; top: 10px; right: 8px; font-size: 8px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; background: rgba(255,255,255,0.2); color: #fff; padding: 2px 5px; border-radius: 3px; }
+  .day-col.today .today-pill { display: inline-block; }
+
+  /* Events */
+  .day-events { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 4px 0; }
+  .day-events-inner { display: flex; flex-direction: column; }
+
+  .ev-item { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .ev-item:last-child { border-bottom: none; }
+  .ev-time-sm { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; }
+  .ev-title-sm { font-size: 11px; font-weight: 700; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .ev-title-red { color: var(--red); }
+  .ev-title-black { color: #111; }
+  .ev-item.canceled .ev-title-sm { text-decoration: line-through; color: #ccc; }
+  .ev-loc-sm { font-size: 9px; font-weight: 400; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev-meta-sm { font-size: 9px; font-weight: 400; color: #bbb; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ev-overflow { font-size: 9px; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; color: #ccc; padding: 5px 10px; flex-shrink: 0; }
+
+  .no-events-day { flex: 1; }
+
+  /* FOOTER */
+  #footer { background: #0d0d0d; border-top: 1px solid #1c1c1c; height: var(--footer-h); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+  #footer-left  { font-size: 10px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: #2e2e2e; }
+  #footer-right { font-size: 10px; font-weight: 400; letter-spacing: 0.08em; color: #2e2e2e; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <div id="header">
+    <div id="header-left">
+      <img id="nu-wordmark" src="nu-logo.png" alt="Northeastern University">
+      <div id="divider"></div>
+      <div id="header-title">
+        Arlington Campus Events
+        <span>Weekly Schedule</span>
+      </div>
+    </div>
+    <div id="clock-block">
+      <div id="clock">--:--</div>
+      <div id="date-disp">--</div>
+    </div>
+  </div>
+
+  <div id="ticker">
+    <div id="ticker-label">Upcoming Student Events</div>
+    <div id="ticker-track"></div>
+  </div>
+
+  <div id="week-grid"></div>
+
+  <div id="footer">
+    <div id="footer-left">Northeastern University · Arlington Campus</div>
+    <div id="footer-right" id="last-updated">--</div>
+  </div>
+
+</div>
+<script>
+  // ── CONFIG ───────────────────────────────────────────────────────────────────
+  // Option B: static snapshot committed by a GitHub Action, served same-origin
+  // by GitHub Pages alongside this file — no CORS issue, no proxy needed.
+  var FEED_URL     = './data/events.json';
+  var REFRESH_MS   = 5 * 60 * 1000;
+  var DEBUG        = true;
+  var RETRY_DELAYS = [5000, 15000, 30000];
+  var lastGoodData = null;
+
+  var NON_STUDENT_CATS = ['arlington - internal/non-student', 'arlington - external/non-student', 'arlington - recruitment', 'arlington - faculty/staff'];
+  var INVITE_ONLY_CATS = ['arlington - internal/non-student', 'arlington - external/non-student', 'arlington - recruitment'];
+
+  var CAMPUS_HOURS = {
+    1: '9:00 AM – 9:30 PM',
+    2: '9:00 AM – 9:30 PM',
+    3: '9:00 AM – 9:30 PM',
+    4: '9:00 AM – 9:30 PM',
+    5: '9:00 AM – 4:30 PM',
+    6: '11:00 AM – 3:00 PM'
+  };
+
+  var DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MON_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  // ── HELPERS ──────────────────────────────────────────────────────────────────
+  function getEl(id) { return document.getElementById(id); }
+  function makeEl(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
+
+  function stripHtml(h) {
+    var d = document.createElement('div');
+    d.innerHTML = h;
+    return d.textContent || d.innerText || '';
+  }
+
+  function customField(ev, label) {
+    if (!Array.isArray(ev.customFields)) return '';
+    for (var i = 0; i < ev.customFields.length; i++) {
+      if (ev.customFields[i].label === label) {
+        return stripHtml(ev.customFields[i].value || '').trim();
+      }
+    }
+    return '';
+  }
+
+  function customFieldAll(ev, label) {
+    if (!Array.isArray(ev.customFields)) return [];
+    for (var i = 0; i < ev.customFields.length; i++) {
+      if (ev.customFields[i].label === label) {
+        var raw = stripHtml(ev.customFields[i].value || '').trim();
+        if (!raw) return [];
+        // 25Live returns multiple categories as a single comma-separated string
+        return raw.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
+      }
+    }
+    return [];
+  }
+
+  function isNonStudent(cats) {
+    for (var i = 0; i < cats.length; i++) {
+      if (NON_STUDENT_CATS.indexOf(cats[i].toLowerCase().trim()) !== -1) return true;
+    }
+    return false;
+  }
+
+  function isInviteOnly(cats) {
+    for (var i = 0; i < cats.length; i++) {
+      if (INVITE_ONLY_CATS.indexOf(cats[i].toLowerCase().trim()) !== -1) return true;
+    }
+    return false;
+  }
+
+  function hasStudentEvent(cats) {
+    return cats.map(function(c) { return c.toLowerCase().trim(); }).indexOf('arlington - student event') !== -1;
+  }
+
+  function parseET(dtStr, offsetStr) {
+    if (!dtStr) return new Date(dtStr);
+    // If already has timezone info, parse as-is
+    if (dtStr.indexOf('Z') !== -1 || dtStr.indexOf('+') !== -1 || dtStr.lastIndexOf('-') > 7) return new Date(dtStr);
+    // Use offset from feed if available (e.g. "-0500"), otherwise fall back to -05:00
+    var offset = '-05:00';
+    if (offsetStr) {
+      // Convert "-0500" format to "-05:00"
+      offset = offsetStr.slice(0, 3) + ':' + offsetStr.slice(3);
+    }
+    return new Date(dtStr + offset);
+  }
+
+  function fmt12(dtStr, offsetStr) {
+    return parseET(dtStr, offsetStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' });
+  }
+
+  function sameDay(a, b) {
+    // Compare using Eastern date to avoid UTC midnight boundary issues
+    var aStr = a.toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+    var bStr = b.toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+    return aStr === bStr;
+  }
+
+  function weekDays() {
+    var base = new Date(); base.setHours(0,0,0,0);
+    var sun = new Date(base); sun.setDate(base.getDate() - base.getDay());
+    var days = [];
+    for (var i = 1; i <= 6; i++) {
+      var d = new Date(sun); d.setDate(sun.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  // ── STORAGE ──────────────────────────────────────────────────────────────────
+  function saveToStorage(data) {
+    try {
+      localStorage.setItem('arlington_events_cache', JSON.stringify(data));
+      localStorage.setItem('arlington_events_cache_time', new Date().toISOString());
+    } catch(e) { console.warn('[Cache] Could not save:', e); }
+  }
+
+  function loadFromStorage() {
+    try {
+      var raw = localStorage.getItem('arlington_events_cache');
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
+
+  function cacheAge() {
+    try {
+      var t = localStorage.getItem('arlington_events_cache_time');
+      return t ? Math.round((Date.now() - new Date(t).getTime()) / 60000) : null;
+    } catch(e) { return null; }
+  }
+
+  // ── CLOCK ────────────────────────────────────────────────────────────────────
+  function updateClock() {
+    var now = new Date();
+    getEl('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' });
+    getEl('date-disp').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── TICKER ───────────────────────────────────────────────────────────────────
+  function buildTicker(events) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var dow = today.getDay();
+    var daysUntilNextMon = (8 - dow) % 7 || 7;
+    var nextMonday = new Date(today); nextMonday.setDate(today.getDate() + daysUntilNextMon);
+    var nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6); nextSunday.setHours(23,59,59,999);
+
+    var upcoming = events.filter(function(e) {
+      var cats = customFieldAll(e, 'Categories');
+      var d = new Date(e.startDateTime);
+      return !e.canceled && d >= nextMonday && d <= nextSunday && (!isNonStudent(cats) || hasStudentEvent(cats));
+    }).sort(function(a, b) {
+      return new Date(a.startDateTime) - new Date(b.startDateTime);
+    }).slice(0, 20);
+
+    var track = getEl('ticker-track');
+    if (!upcoming.length) {
+      track.innerHTML = '<span>No events scheduled for next week</span>';
+      return;
+    }
+
+    var items = upcoming.map(function(e) {
+      var d = new Date(e.startDateTime);
+      var dd = String(d.getDate()).padStart(2,'0');
+      var mm = String(d.getMonth() + 1).padStart(2,'0');
+      return '<span>' + mm + '/' + dd + ' ' + fmt12(e.startDateTime, e.startTimeZoneOffset) + ' \u00b7 ' + stripHtml(e.title) + '</span>';
+    }).join('');
+
+    track.innerHTML = items + items;
+  }
+
+  // ── WEEK GRID ────────────────────────────────────────────────────────────────
+  var GRID_H = 812; // 1006 - 110 - 48 - 36
+  var COL_HEADER_H = 88; // approximate header height in px
+  var AVAILABLE_H = GRID_H - 20 - COL_HEADER_H; // subtract grid padding
+
+  function renderWeekGrid(events) {
+    var grid = getEl('week-grid');
+    grid.innerHTML = '';
+    var today = new Date(); today.setHours(0,0,0,0);
+    var days = weekDays();
+
+    days.forEach(function(day) {
+      var isToday = sameDay(day, today);
+      var past = day < today;
+
+      var dayEvs = events.filter(function(e) {
+        return sameDay(parseET(e.startDateTime, e.startTimeZoneOffset), day);
+      }).sort(function(a, b) {
+        return parseET(a.startDateTime, a.startTimeZoneOffset) - parseET(b.startDateTime, b.startTimeZoneOffset);
+      });
+
+      var col = makeEl('div', 'day-col' + (isToday ? ' today' : '') + (past ? ' past' : ''));
+
+      // Header
+      var hdr = makeEl('div', 'day-header');
+      var hours = CAMPUS_HOURS[day.getDay()] || 'Closed';
+      hdr.innerHTML = '<div class="day-name">' + DAY_SHORT[day.getDay()] + '</div>'
+        + '<div class="day-date-num">' + day.getDate() + '</div>'
+        + '<div class="day-hours">' + hours + '</div>'
+        + (isToday ? '<div class="today-pill">Today</div>' : '');
+      col.appendChild(hdr);
+
+      // Events
+      var evList = makeEl('div', 'day-events');
+
+      if (!dayEvs.length) {
+        evList.appendChild(makeEl('div', 'no-events-day'));
+      } else {
+        // Calculate font/padding scale based on event count
+        var count = dayEvs.length;
+        var itemH, timeSize, titleSize, metaSize, locSize, itemPad;
+
+        if (count <= 3) {
+          itemPad = '6px 10px'; timeSize = '12px'; titleSize = '15px'; metaSize = '12px'; locSize = '12px';
+        } else if (count <= 5) {
+          itemPad = '4px 10px'; timeSize = '11px'; titleSize = '13px'; metaSize = '11px'; locSize = '11px';
+        } else if (count <= 7) {
+          itemPad = '3px 10px'; timeSize = '9px'; titleSize = '11px'; metaSize = '9px'; locSize = '9px';
+        } else {
+          itemPad = '2px 8px'; timeSize = '8px'; titleSize = '10px'; metaSize = '8px'; locSize = '8px';
+        }
+
+        var inner = makeEl('div', 'day-events-inner');
+        dayEvs.forEach(function(ev) {
+          try {
+            var item = makeEl('div', 'ev-item' + (ev.canceled ? ' canceled' : ''));
+            item.style.padding = itemPad;
+            var loc = customField(ev, 'Arlington - Location') || stripHtml(ev.location || '').replace(/\s+/g, ' ').trim();
+            var org = customField(ev, 'Organization');
+            var cats = customFieldAll(ev, 'Categories');
+            var cat = cats.join(', ');
+            var titleClass = isNonStudent(cats) ? 'ev-title-sm ev-title-black' : 'ev-title-sm ev-title-red';
+            var titleText = stripHtml(ev.title) + (isInviteOnly(cats) ? ' - Invite Only' : '');
+            var html = '<div class="ev-time-sm" style="font-size:' + timeSize + '">' + fmt12(ev.startDateTime, ev.startTimeZoneOffset) + '</div>';
+            html += '<div class="' + titleClass + '" style="font-size:' + titleSize + '">' + titleText + '</div>';
+            if (loc) html += '<div class="ev-loc-sm" style="font-size:' + locSize + '">' + loc + '</div>';
+            if (org) html += '<div class="ev-meta-sm" style="font-size:' + metaSize + '"><strong>Organization:</strong> ' + org + '</div>';
+            if (cat) html += '<div class="ev-meta-sm" style="font-size:' + metaSize + '"><strong>Categories:</strong> ' + cat + '</div>';
+            item.innerHTML = html;
+            inner.appendChild(item);
+          } catch(e) {
+            console.warn('[Render] Skipped event:', e, ev);
+          }
+        });
+
+        evList.appendChild(inner);
+      }
+
+      col.appendChild(evList);
+      grid.appendChild(col);
+    });
+  }
+
+  // ── FEED ─────────────────────────────────────────────────────────────────────
+  function processAndRender(data) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var dow = today.getDay();
+    var thisMonday = new Date(today); thisMonday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    var twoWeeksEnd = new Date(thisMonday); twoWeeksEnd.setDate(thisMonday.getDate() + 13); twoWeeksEnd.setHours(23,59,59,999);
+
+    var events = data.filter(function(e) {
+      var d = new Date(e.startDateTime);
+      return d >= thisMonday && d <= twoWeeksEnd;
+    });
+
+    if (DEBUG) console.log('[Feed] Events after filter: ' + events.length);
+
+    buildTicker(events);
+    renderWeekGrid(events);
+
+    var lu = document.getElementById('last-updated');
+    if (lu) lu.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+  }
+
+  function loadFeed(retryIndex) {
+    retryIndex = retryIndex || 0;
+    fetch(FEED_URL, { cache: 'no-store' })
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        if (DEBUG) {
+          console.log('[Feed] Total records: ' + data.length);
+          if (data.length > 0) {
+            var dates = data.map(function(e) { return e.startDateTime; }).sort();
+            console.log('[Feed] Date range: ' + dates[0] + ' to ' + dates[dates.length - 1]);
+          }
+        }
+        lastGoodData = data;
+        saveToStorage(data);
+        processAndRender(data);
+      })
+      .catch(function(err) {
+        console.error('[Feed] Error (attempt ' + (retryIndex + 1) + '):', err);
+        if (retryIndex < RETRY_DELAYS.length) {
+          setTimeout(function() { loadFeed(retryIndex + 1); }, RETRY_DELAYS[retryIndex]);
+        } else if (lastGoodData) {
+          processAndRender(lastGoodData);
+          var lu = document.getElementById('last-updated');
+          if (lu) lu.textContent = 'Cached \u00b7 ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+        } else {
+          var stored = loadFromStorage();
+          if (stored) {
+            var age = cacheAge();
+            processAndRender(stored);
+            var lu = document.getElementById('last-updated');
+            if (lu) lu.textContent = 'Cached' + (age !== null ? ' \u00b7 ' + age + 'm ago' : '') + ' \u00b7 ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+          } else {
+            var lu = document.getElementById('last-updated');
+            if (lu) lu.textContent = 'Feed unavailable';
+          }
+        }
+      });
+  }
+
+  // Pre-load from localStorage on startup
+  var stored = loadFromStorage();
+  if (stored) {
+    lastGoodData = stored;
+    processAndRender(stored);
+    if (DEBUG) console.log('[Cache] Pre-loaded from localStorage, age: ' + cacheAge() + ' mins');
+  }
+
+  loadFeed();
+  setInterval(loadFeed, REFRESH_MS);
+</script>
+</body>
+</html>
